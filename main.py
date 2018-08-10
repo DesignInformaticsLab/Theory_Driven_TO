@@ -159,7 +159,7 @@ while final_error>100:
 
     if Prepared_training_sample == False:
         eng = matlab.engine.start_matlab()
-        eng.infill_high_dim(1,Y_train)
+        eng.infill_high_dim(0,Y_train)
 
 
     for it in range(10000000):
