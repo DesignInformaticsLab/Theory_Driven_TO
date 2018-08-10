@@ -132,9 +132,11 @@ else:
     if not os.path.exists(directory_result):
         os.makedirs(directory_result)
     sio.savemat('{}/index_ind.mat'.format(directory_result),{'index_ind':index_ind})
+    Y_train = np.zeros([len(LHS),nn])
     eng = matlab.engine.start_matlab()
-    eng.infill_high_dim(nargout=0)
+    eng.infill_high_dim(1,Y_train)
 
+Y_test = sio.loadmat('{}/phi_true_test2.mat'.format(directory_data))['phi_true_test']
 
 budget=0
 final_error=float('inf')
@@ -147,11 +149,7 @@ while final_error>100:
     except:
         pass
 
-    if Prepared_training_sample == True:
-        Y_train = sio.loadmat('{}/phi_true_train.mat'.format(directory_data))['phi_true_train']
-    else:
-        Y_train = np.zeros([len(LHS),nn])
-    Y_test = sio.loadmat('{}/phi_true_test2.mat'.format(directory_data))['phi_true_test']
+    Y_train = sio.loadmat('{}/phi_true_train.mat'.format(directory_data))['phi_true_train']
 
     F_batch = np.zeros([len(LHS), z_dim])
     for i in range(len(LHS)):
@@ -161,7 +159,7 @@ while final_error>100:
 
     if Prepared_training_sample == False:
         eng = matlab.engine.start_matlab()
-        eng.infill_high_dim(1,Y_train)
+        eng.infill_high_dim(0,Y_train)
 
 
     for it in range(10000000):
@@ -222,5 +220,5 @@ while final_error>100:
     # solve the worst one
     if Prepared_training_sample == False:
         eng = matlab.engine.start_matlab()
-        eng.infill_high_dim(nargout=0)
+        eng.infill_high_dim(0,Y_train)
 
