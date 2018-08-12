@@ -44,8 +44,8 @@ def P(z):
 # Input parameter
 nelx, nely = 12*10, 4*10
 nn = nelx*nely
-batch_size=10
-initial_num=100
+batch_size=10 # Training batch
+initial_num=100 # Initial number of training samples
 Prepared_training_sample = False # True if samples are pre-solved offline
 
 # network parameter
@@ -53,7 +53,6 @@ z_dim = 3
 width = nely
 height = nelx
 h_dim = width/8*height/8
-
 
 deconv2_1_features=32*3
 deconv2_2_features=32*3
@@ -125,7 +124,7 @@ LHS_x=np.int32(LHS[:,0])
 LHS_y=np.int32(LHS[:,1])
 LHS_z=LHS[:,2]
 
-index_ind = random.sample(range(0,len(LHS)),initial_num) # initial start with 100, can be modified
+index_ind = random.sample(range(0,len(LHS)),initial_num) # initial start with 100 random loading condition, can be modified
 
 if Prepared_training_sample==True:
     pass
@@ -138,14 +137,14 @@ else:
 
 Y_test = sio.loadmat('{}/phi_true_test2.mat'.format(directory_data))['phi_true_test'] # prepared off-line
 
-budget=0
+budget=0 # used to compare the computational cost with data-driven method
 final_error=float('inf')
-terminate_criteria=100
+terminate_criteria=100 # the network is well-trained, no need additional samples
 
 # one-shot algorithm
 while final_error>terminate_criteria:
     print("requirement doesn't match, current final_error={}, keep sampling".format(final_error))
-    try:
+    try: # if it's not the initial round, loading the result for the additional point
         add_point_index=sio.loadmat('{}/add_point_index.mat')['add_point_index'][0]
         index_ind=list(add_point_index)+index_ind
     except:
@@ -158,12 +157,12 @@ while final_error>terminate_criteria:
         F_batch[i,0]=LHS_x[i]
         F_batch[i,1]=LHS_y[i]
         F_batch[i,2]=LHS_z[i]
-
+    # updating the network
     for it in range(10000000):
-        random_ind=np.random.choice(index_ind,batch_size,replace=False)
+        random_ind=np.random.choice(index_ind,batch_size,replace=False) # randomly selecting training data within learned pool
 
         _,error=sess.run([solver, recon_loss],feed_dict={y_output:Y_train[random_ind].T,F_input:F_batch[random_ind]})
-        if it%10 == 0:
+        if it%100 == 0:
             print('iteration:{}, recon_loss:{}'.format(it,error))
         if error <= 1:
             if not os.path.exists(directory_model):
@@ -172,12 +171,12 @@ while final_error>terminate_criteria:
             saver.save(sess, '{}/model_sample_{}'.format(directory_model,len(index_ind)))
             print('converges, saving the model.....')
             break
-
+    # check the performance of the network on testing dataset
     _,final_error=sess.run([solver, recon_loss],feed_dict={y_output:Y_test[random.sample(range(0,len(Y_test)),batch_size)].T,F_input:F_batch[random_ind]})
     if final_error<=terminate_criteria:
         break
 
-    # random generation
+    # random generation (default value is 100 samples)
     candidate_pool=list(set(list(np.int32(np.linspace(0,len(Y_train)-1,len(Y_train)))))-set(index_ind))
     random_candidate=np.random.choice(candidate_pool,100,replace=False)
 
@@ -211,10 +210,11 @@ while final_error>terminate_criteria:
     sio.savemat('{}/phi_gen.mat'.format(directory_result),{'phi_gen':phi_gen})
     sio.savemat('{}/random_candidate.mat'.format(directory_result),{'random_candidate':random_candidate})
 
-    # evaluate the random samples and pick the worst one
+    # evaluate the random generated samples and pick the worst one
     eng = matlab.engine.start_matlab()
     eng.cal_c_high_dim(nargout=0)
-
+    
+    # updating the budget 
     if Prepared_training_sample==False:
         budget=np.sum(sio.loadmat('{}/budget_store.mat')['budget_store'].reshape([-1]))+budget+100
 
