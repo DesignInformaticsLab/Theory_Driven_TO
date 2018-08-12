@@ -44,8 +44,9 @@ def P(z):
 # Input parameter
 nelx, nely = 12*10, 4*10
 nn = nelx*nely
-batch_size=50
-Prepared_training_sample=True
+batch_size=10
+initial_num=100
+Prepared_training_sample = False # True if samples are pre-solved offline
 
 # network parameter
 z_dim = 3
@@ -115,7 +116,7 @@ directory_model='model_save/'
 directory_result='experiment_result/'
 
 
-LHS = sio.loadmat('{}/LHS_train.mat'.format(directory_data))['LHS_train']
+LHS = sio.loadmat('{}/LHS_train.mat'.format(directory_data))['LHS_train'] # pre-sampling the loading condition offline
 
 LHS[:,0] = LHS[:,0]-81
 LHS[:,1] = LHS[:,1]-1
@@ -124,7 +125,7 @@ LHS_x=np.int32(LHS[:,0])
 LHS_y=np.int32(LHS[:,1])
 LHS_z=LHS[:,2]
 
-index_ind = random.sample(range(0,len(LHS)),100)
+index_ind = random.sample(range(0,len(LHS)),initial_num) # initial start with 100, can be modified
 
 if Prepared_training_sample==True:
     pass
@@ -132,17 +133,18 @@ else:
     if not os.path.exists(directory_result):
         os.makedirs(directory_result)
     sio.savemat('{}/index_ind.mat'.format(directory_result),{'index_ind':index_ind})
-    Y_train = np.zeros([len(LHS),nn])
     eng = matlab.engine.start_matlab()
-    eng.infill_high_dim(1,Y_train)
+    eng.infill_high_dim(1,nargout=0)
 
-Y_test = sio.loadmat('{}/phi_true_test2.mat'.format(directory_data))['phi_true_test']
+Y_test = sio.loadmat('{}/phi_true_test2.mat'.format(directory_data))['phi_true_test'] # prepared off-line
 
 budget=0
 final_error=float('inf')
+terminate_criteria=100
 
-while final_error>100:
-    print("requirement doesn't match, final_error={}, keep sampling".format(final_error))
+# one-shot algorithm
+while final_error>terminate_criteria:
+    print("requirement doesn't match, current final_error={}, keep sampling".format(final_error))
     try:
         add_point_index=sio.loadmat('{}/add_point_index.mat')['add_point_index'][0]
         index_ind=list(add_point_index)+index_ind
@@ -157,18 +159,13 @@ while final_error>100:
         F_batch[i,1]=LHS_y[i]
         F_batch[i,2]=LHS_z[i]
 
-    if Prepared_training_sample == False:
-        eng = matlab.engine.start_matlab()
-        eng.infill_high_dim(0,Y_train)
-
-
     for it in range(10000000):
         random_ind=np.random.choice(index_ind,batch_size,replace=False)
 
         _,error=sess.run([solver, recon_loss],feed_dict={y_output:Y_train[random_ind].T,F_input:F_batch[random_ind]})
         if it%10 == 0:
             print('iteration:{}, recon_loss:{}'.format(it,error))
-        if error <= 100:
+        if error <= 1:
             if not os.path.exists(directory_model):
                 os.makedirs(directory_model)
             saver=tf.train.Saver()
@@ -177,6 +174,8 @@ while final_error>100:
             break
 
     _,final_error=sess.run([solver, recon_loss],feed_dict={y_output:Y_test[random.sample(range(0,len(Y_test)),batch_size)].T,F_input:F_batch[random_ind]})
+    if final_error<=terminate_criteria:
+        break
 
     # random generation
     candidate_pool=list(set(list(np.int32(np.linspace(0,len(Y_train)-1,len(Y_train)))))-set(index_ind))
@@ -215,10 +214,12 @@ while final_error>100:
     # evaluate the random samples and pick the worst one
     eng = matlab.engine.start_matlab()
     eng.cal_c_high_dim(nargout=0)
-    budget = budget+100
+
+    if Prepared_training_sample==False:
+        budget=np.sum(sio.loadmat('{}/budget_store.mat')['budget_store'].reshape([-1]))+budget+100
 
     # solve the worst one
     if Prepared_training_sample == False:
         eng = matlab.engine.start_matlab()
-        eng.infill_high_dim(0,Y_train)
+        eng.infill_high_dim(0,nargout=0)
 

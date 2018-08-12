@@ -1,5 +1,7 @@
 %% This code follows the Sigmund 2018 infill bone paper
-function []=infill_high_dim(initial,phi_true_train)
+function infill_high_dim(initial)
+fprintf('start solving the TO problem, intial is %d......\n',initial)
+
 %% Input
 ratio=10;
 nelx=12*ratio; % horizontal length
@@ -11,16 +13,18 @@ rmin=3.0; % filter radius
 density_r = 6.0; % density radius
 
 
-if initial==1
-    index=load('expriment_result/random_candidate.mat');
-    index=index.random_cadidate+1;
-else
-    index=load('experiment_data/index_ind.mat');
-    index=index.index_ind+1;
-end
-
-LHS=load('expriment_data/LHS_train.mat');
+LHS=load('experiment_data/LHS_train.mat');
 LHS=LHS.LHS_train;
+if initial~=1
+    index=load('experiment_result/random_candidate.mat');
+    index=index.random_cadidate+1;
+    phi_true_train=load('experiment_data/phi_true_train.mat');
+    phi_true_train=phi_true_train.phi_true_train;
+else
+    index=load('experiment_result/index_ind.mat');
+    index=index.index_ind+1;
+    phi_true_train=zeros(length(LHS),nelx*nely);
+end
 LHS=LHS(index);
 
 batch_size=length(index);
@@ -28,18 +32,19 @@ xPhys_true = zeros(batch_size,nely,nelx);
 phi_true = zeros(batch_size,nely,nelx);
 c_store= zeros(batch_size,1);
 
-count_store=zeros(batch_size,1);
-force_store=zeros(nelx,batch_size);
-theta_store=zeros(1,batch_size);
-point_store=zeros(1,batch_size);
+budget_store=zeros(batch_size,1);
+% force_store=zeros(nelx,batch_size);
+% theta_store=zeros(1,batch_size);
+% point_store=zeros(1,batch_size);
 
 
 for iii = 1:1:batch_size
     
-count=0;
+budget=0;
 force=-1;
 
 %% LHS
+F = sparse(2*(nely+1)*(nelx+1),1);
 point_rand = ((nely+1)*(LHS(iii,1)-1)+LHS(iii,2))*2;
 theta_rand=LHS(iii,3);
 Fx=force*sin(theta_rand);
@@ -242,7 +247,7 @@ while beta < 10
             c_old = c;
             loop4 = 0;
             while loop4 < 100
-                count=count+1;
+                budget=budget+1;
                 delta = max(-0.1*ones(nn,1),min(0.1*ones(nn,1),-dphi*learning_rate));
                 phi_temp = max(zeros(nn,1),min(ones(nn,1),phi + delta));
 %                 delta = -dphi*learning_rate;
@@ -319,20 +324,21 @@ end
 xPhys_true(iii,:,:)=reshape(rho,[nely,nelx]);
 phi_true(iii,:,:)=reshape(phi,[nely,nelx]);
 c_store(iii,:)=c;
-figure,colormap(gray); imagesc(1-reshape(rho,[nely,nelx])); caxis([0 1]); axis equal; axis off; drawnow;
+budget_store(iii,:)=budget;
+figure(1),colormap(gray); imagesc(1-reshape(rho,[nely,nelx])); caxis([0 1]); axis equal; axis off; drawnow;
 % colormap(gray); imagesc(1-rho); caxis([0 1]); axis equal; axis off; drawnow;
-fprintf(' It.:%5i Obj.:%11.4f g:%7.3f eta:%7.3f r:%7.3f ch.:%7.3f iii:%7.3f jjj::%7.3f\n',count, c, g, eta, log(r), max(abs(full(dphi))),iii,jjj);
+% fprintf(' It.:%5i Obj.:%11.4f g:%7.3f eta:%7.3f r:%7.3f ch.:%7.3f iii:%7.3f \n',budget, c, g, eta, log(r), max(abs(full(dphi))),iii);
 % saveas(gcf,sprintf('%s/FIG_show_%d.png',fname1,iii));
 % close(1)
-count_store(iii,:)=count;
 % iii
 end
 fname1='experiment_data';
 % fname2='experiment_result';
 for index_LHS = 1:batch_size
-    phi_true_train(index(index_LHS),:)=phi_true(index_LHS);
+    phi_true_train(index(index_LHS),:)=phi_true(index_LHS).reshape(nely*nexl,1);
 end
 
+save(sprintf('%s/budget_store.mat',fname1),'budget_store');
 save(sprintf('%s/phi_true_train.mat',fname1),'phi_true_train');
-save(sprintf('%s/xPhys_true.mat',fname1),'xPhys_true');
-save(sprintf('%s/c_store.mat',fname1),'c_store');
+% save(sprintf('%s/xPhys_true.mat',fname1),'xPhys_true');
+% save(sprintf('%s/c_store.mat',fname1),'c_store');
