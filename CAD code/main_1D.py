@@ -165,7 +165,7 @@ while final_error>terminate_criteria:
         if it%5 == 0:
             print('iteration:{}, recon_loss:{}'.format(it,error))
 
-        if error <= 1000:
+        if error <= 0.05:
             if not os.path.exists(directory_model):
                 os.makedirs(directory_model)
             saver=tf.train.Saver()
@@ -207,7 +207,7 @@ while final_error>terminate_criteria:
         os.makedirs(directory_result)
     phi_gen=np.concatenate(phi_store,axis=1).T
     sio.savemat('{}/phi_gen_1D.mat'.format(directory_result),{'phi_gen':phi_gen})
-    sio.savemat('{}/random_candidate.mat'.format(directory_result),{'random_candidate':index_ind})
+    sio.savemat('{}/random_candidate_1D.mat'.format(directory_result),{'random_candidate':index_ind})
 
     eng = matlab.engine.start_matlab()
     eng.cal_c_1D(nargout=0)
