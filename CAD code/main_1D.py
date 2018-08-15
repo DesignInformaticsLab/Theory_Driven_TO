@@ -40,12 +40,11 @@ def P(z):
 
     return prob
 
-
 # Input parameter
 nelx, nely = 12*10, 4*10
 nn = nelx*nely
 batch_size=5
-initial_num=100
+initial_num=5
 Prepared_training_sample = True # True if samples are pre-solved offline
 
 # network parameter
@@ -143,7 +142,7 @@ for i in range(100):
 
 budget=0
 final_error=float('inf')
-terminate_criteria=1
+terminate_criteria=1 # can be adjusted
 testing_num = 100
 
 while final_error>terminate_criteria:
@@ -176,7 +175,7 @@ while final_error>terminate_criteria:
     ratio=testing_num/batch_size
     final_error=0
     for it in range(ratio):
-        _,final_error_temp=sess.run([solver, recon_loss],feed_dict={y_output:Y_test[it%ratio*batch_size:it%ratio*batch_size+batch_size].T,
+        final_error_temp=sess.run(recon_loss,feed_dict={y_output:Y_test[it%ratio*batch_size:it%ratio*batch_size+batch_size].T,
                                                                     F_input:F_batch[it%ratio*batch_size:it%ratio*batch_size+batch_size]})
         final_error=final_error + final_error_temp
     final_error=final_error/testing_num

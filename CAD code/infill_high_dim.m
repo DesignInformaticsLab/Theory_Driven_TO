@@ -16,12 +16,12 @@ density_r = 6.0; % density radius
 LHS=load('experiment_data/LHS_train.mat');
 LHS=LHS.LHS_train;
 if initial~=1
-    index=load('experiment_result/random_candidate.mat');
+    index=load('experiment_result/random_candidate.mat')+1; % python to matlab
     index=index.random_cadidate+1;
     phi_true_train=load('experiment_data/phi_true_train.mat');
     phi_true_train=phi_true_train.phi_true_train;
 else
-    index=load('experiment_result/index_ind.mat');
+    index=load('experiment_result/index_ind.mat')+1; % python to matlab
     index=index.index_ind+1;
     phi_true_train=zeros(length(LHS),nelx*nely);
 end

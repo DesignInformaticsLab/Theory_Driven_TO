@@ -4,6 +4,7 @@
 load('experiment_data/LHS_train.mat')
 load('experiment_result/phi_gen.mat')
 load('experiment_result/random_candidate.mat')
+random_candidate=random_candidate+1; % python to matlab
 %% Input
 ratio=10;
 nelx=12*ratio; % horizontal length
@@ -217,5 +218,5 @@ fprintf('evaluating sample %s',i)
 end
 
 [B,I]=sort(mu_store,'descend');
-add_point_index=random_candidate(I(1));
+add_point_index=random_candidate(I(1)-1); % matlab to python
 save(sprintf('experiment_result/add_point_index.mat'),'add_point_index');

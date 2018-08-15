@@ -213,10 +213,10 @@ mu_store(iii,:)=mu_check;
 
 g_store(iii,:)=g;
 global_density_store(iii,:)=global_density;
-fprintf('evaluating sample %s',iii)
+fprintf('evaluating sample %d \n',iii)
 end
 asdf
 [B,I]=sort(mu_store,'descend');
-add_point_index=I(1);
+add_point_index=I(1)-1;
 save(sprintf('experiment_result/add_point_index_1D.mat'),'add_point_index');
 % clear
