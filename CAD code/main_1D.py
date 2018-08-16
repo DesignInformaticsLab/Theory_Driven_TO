@@ -48,7 +48,7 @@ initial_num=5
 Prepared_training_sample = True # True if samples are pre-solved offline
 
 # network parameter
-z_dim = 2
+z_dim = 1
 width = nely
 height = nelx
 h_dim = width/8*height/8
@@ -134,11 +134,12 @@ force=-1
 F_batch= np.zeros([100, z_dim])
 
 for i in range(100):
-    Fx = force * np.sin(theta[i])
-    Fy = force * np.cos(theta[i])
-
-    F_batch[i, 0] = Fx
-    F_batch[i, 1] = Fy
+    # Fx = force * np.sin(theta[i])
+    # Fy = force * np.cos(theta[i])
+    #
+    # F_batch[i, 0] = Fx
+    # F_batch[i, 1] = Fy
+    F_batch[i,:]=theta[i]
 
 budget=0
 final_error=float('inf')
@@ -148,7 +149,7 @@ testing_num = 100
 while final_error>terminate_criteria:
     print("requirement doesn't match, current final_error={}, keep sampling".format(final_error))
     try:
-        add_point_index=sio.loadmat('{}/add_point_index_1D.mat')['add_point_index'][0]
+        add_point_index=sio.loadmat('{}/add_point_index_1D.mat'.format(directory_result))['add_point_index'][0]
         index_ind=list(add_point_index)+index_ind
     except:
         pass
@@ -187,12 +188,14 @@ while final_error>terminate_criteria:
     F_batch_test= np.zeros([testing_num, z_dim])
 
     for i in range(testing_num):
-        Fx = force * np.sin(theta[i])
-        Fy = force * np.cos(theta[i])
+        # Fx = force * np.sin(theta[i])
+        # Fy = force * np.cos(theta[i])
+        #
+        # # up-right corner
+        # F_batch_test[i, 0] = Fx
+        # F_batch_test[i, 1] = Fy
+        F_batch_test[i,:]=theta[i]
 
-        # up-right corner
-        F_batch_test[i, 0] = Fx
-        F_batch_test[i, 1] = Fy
 
     # evaluate all points (total 100)
     ratio=testing_num/batch_size
