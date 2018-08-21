@@ -46,10 +46,10 @@ nelx, nely = 12*10, 4*10
 nn = nelx*nely
 batch_size=10
 initial_num=100
-Prepared_training_sample = False # True if samples are pre-solved offline
+Prepared_training_sample = True # True if samples are pre-solved offline
 
 # network parameter
-z_dim = 3
+z_dim = 41*41*2
 width = nely
 height = nelx
 h_dim = width/8*height/8
@@ -102,9 +102,9 @@ phi_true = tf.transpose(tf.reshape(P_output,[batch_size,nn]))
 
 global_step=tf.Variable(0,trainable=False)
 starter_learning_rate=0.0005
-learning_rate=tf.train.exponential_decay(starter_learning_rate,global_step,500,1.00,staircase=True)
+learning_rate=tf.train.exponential_decay(starter_learning_rate,global_step,10000,1.0,staircase=True)
 y_output=tf.placeholder(tf.float32, shape=([nn, batch_size]))
-recon_loss = tf.reduce_sum((phi_true-y_output)**2)
+recon_loss = tf.reduce_sum((phi_true-y_output)**2)/batch_size
 solver = tf.train.AdamOptimizer(learning_rate).minimize(recon_loss, global_step=global_step)
 
 sess = tf.Session()
@@ -125,6 +125,16 @@ LHS_x=np.int32(LHS[:,0])
 LHS_y=np.int32(LHS[:,1])
 LHS_z=LHS[:,2]
 
+force=-1
+F_batch = np.zeros([len(LHS), z_dim])
+error_store=[]
+for i in range(len(LHS)):
+    Fx = force * np.sin(LHS_z[i])
+    Fy = force * np.cos(LHS_z[i])
+    F_batch[i,2*((nely+1)*LHS_x[i]+LHS_y[i]+1)-1]=Fy
+    F_batch[i,2*((nely+1)*LHS_x[i]+LHS_y[i]+1)-2]=Fx
+
+
 index_ind = random.sample(range(0,len(LHS)),initial_num) # initial start with 100, can be modified
 
 if Prepared_training_sample==True:
@@ -137,16 +147,33 @@ else:
     eng.infill_high_dim(1,nargout=0)
 
 Y_test = sio.loadmat('{}/phi_true_test2.mat'.format(directory_data))['phi_true_test'] # prepared off-line
+LHS_test=sio.loadmat('{}/LHS_test2.mat'.format(directory_data))['LHS_test']
+
+LHS_test[:,0] = LHS_test[:,0]-81
+LHS_test[:,1] = LHS_test[:,1]-1
+
+LHS_x_test=np.int32(LHS_test[:,0])
+LHS_y_test=np.int32(LHS_test[:,1])
+LHS_z_test=LHS_test[:,2]
+
+force=-1
+F_batch_test = np.zeros([len(LHS_test), z_dim])
+for i in range(len(LHS_test)):
+    Fx_test = force * np.sin(LHS_z_test[i])
+    Fy_test = force * np.cos(LHS_z_test[i])
+    F_batch_test[i,2*((nely+1)*LHS_x_test[i]+LHS_y_test[i]+1)-1]=Fy_test
+    F_batch_test[i,2*((nely+1)*LHS_x_test[i]+LHS_y_test[i]+1)-2]=Fx_test
+
 
 budget=0
 final_error=float('inf')
-terminate_criteria=100
+terminate_criteria=1
 
 # one-shot algorithm
 while final_error>terminate_criteria:
     print("requirement doesn't match, current final_error={}, keep sampling".format(final_error))
     try:
-        add_point_index=sio.loadmat('{}/add_point_index.mat')['add_point_index'][0]
+        add_point_index=sio.loadmat('{}/add_point_index.mat'.format(directory_result))['add_point_index'][0]
         index_ind=list(add_point_index)+index_ind
     except:
         pass
@@ -159,12 +186,20 @@ while final_error>terminate_criteria:
         F_batch[i,1]=LHS_y[i]
         F_batch[i,2]=LHS_z[i]
 
-    for it in range(10000000):
+    force=-1
+    F_batch = np.zeros([len(LHS), z_dim])
+    for i in range(len(LHS)):
+        Fx = force * np.sin(LHS_z[i])
+        Fy = force * np.cos(LHS_z[i])
+        F_batch[i,2*((nely+1)*LHS_x[i]+LHS_y[i]+1)-1]=Fy
+        F_batch[i,2*((nely+1)*LHS_x[i]+LHS_y[i]+1)-2]=Fx
+
+    for it in range(1000000):
         random_ind=np.random.choice(index_ind,batch_size,replace=False)
 
         _,error=sess.run([solver, recon_loss],feed_dict={y_output:Y_train[random_ind].T,F_input:F_batch[random_ind]})
-        if it%10 == 0:
-            print('iteration:{}, recon_loss:{}'.format(it,error))
+        if it%100 == 0:
+            print('iteration:{}, recon_loss:{}, num:{}'.format(it,error,len(index_ind)))
         if error <= 1:
             if not os.path.exists(directory_model):
                 os.makedirs(directory_model)
@@ -172,14 +207,17 @@ while final_error>terminate_criteria:
             saver.save(sess, '{}/model_sample_{}'.format(directory_model,len(index_ind)))
             print('converges, saving the model.....')
             break
-
+    # print('converges at')
+    testing_num=len(LHS_test)
     ratio=testing_num/batch_size
     final_error=0
     for it in range(ratio):
-        _,final_error_temp=sess.run([solver, recon_loss],feed_dict={y_output:Y_test[it%ratio*batch_size:it%ratio*batch_size+batch_size].T,
-                                                                    F_input:F_batch[it%ratio*batch_size:it%ratio*batch_size+batch_size]})
+        final_error_temp=sess.run(recon_loss,feed_dict={y_output:Y_test[it%ratio*batch_size:it%ratio*batch_size+batch_size].T,
+                                                                    F_input:F_batch_test[it%ratio*batch_size:it%ratio*batch_size+batch_size]})
         final_error=final_error + final_error_temp
+
     final_error=final_error/testing_num
+    print('current final predicting error: {}/{}'.format(final_error,terminate_criteria))
     if final_error<=terminate_criteria:
         break
 
@@ -195,18 +233,27 @@ while final_error>terminate_criteria:
     LHS_y_candidate=np.int32(LHS_candidate[:,1])
     LHS_z_candidate=LHS_candidate[:,2]
 
-    testing_num = len(LHS_candidate)
-    F_batch_candidate = np.zeros([testing_num, z_dim])
+    valid_num = len(LHS_candidate)
+    # F_batch_candidate = np.zeros([valid_num , z_dim])
 
-    error_store=[]
+    # error_store=[]
+    # for i in range(len(LHS_candidate)):
+    #     F_batch_candidate[i,0]=LHS_x_candidate[i]
+    #     F_batch_candidate[i,1]=LHS_y_candidate[i]
+    #     F_batch_candidate[i,2]=LHS_z_candidate[i]
+
+
+    force=-1
+    F_batch_candidate= np.zeros([len(LHS_candidate), z_dim])
     for i in range(len(LHS_candidate)):
-        F_batch_candidate[i,0]=LHS_x_candidate[i]
-        F_batch_candidate[i,1]=LHS_y_candidate[i]
-        F_batch_candidate[i,2]=LHS_z_candidate[i]
+        Fx = force * np.sin(LHS_z[i])
+        Fy = force * np.cos(LHS_z[i])
+        F_batch_candidate[i,2*((nely+1)*LHS_x[i]+LHS_y[i]+1)-1]=Fy
+        F_batch_candidate[i,2*((nely+1)*LHS_x[i]+LHS_y[i]+1)-2]=Fx
 
     rho_gen=[]
     phi_store=[]
-    ratio=testing_num/batch_size
+    ratio=valid_num /batch_size
     for it in range(ratio):
         phi_update=sess.run(phi_true,feed_dict={F_input:F_batch_candidate[it%ratio*batch_size:it%ratio*batch_size+batch_size]})
         phi_store.append(phi_update)

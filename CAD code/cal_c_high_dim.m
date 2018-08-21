@@ -15,10 +15,10 @@ gamma=3.0; % material binarization
 rmin=3.0; % filter radius
 density_r = 6.0; % density radius
 
-batch_size=100;
+batch_size=size(phi_gen,1);
 LHS_rand=LHS_train(random_candidate,:);
 
-xPhys_true = zeros(100,nely,nelx);
+xPhys_true = zeros(batch_size,nely,nelx);
 % phi_true = zeros(batch_size,nely,nelx);
 % c_store= zeros(batch_size,1);
 c_our_final=zeros(batch_size,1);
@@ -214,9 +214,9 @@ dc_dphi=dc_dphi';
 mu_check=full(sum((dc_dphi*(1-dg_dphi'*(dg_dphi*dg_dphi'+eye(1)*1e-12)^(-1)*dg_dphi)).^2));
 mu_store(iii,:)=mu_check;   
 rho_store(iii,:)=rho(:);
-fprintf('evaluating sample %s',i)
+fprintf('evaluating sample %d \n',iii)
 end
 
 [B,I]=sort(mu_store,'descend');
-add_point_index=random_candidate(I(1)-1); % matlab to python
+add_point_index=random_candidate(I(1))-1; % matlab to python
 save(sprintf('experiment_result/add_point_index.mat'),'add_point_index');
