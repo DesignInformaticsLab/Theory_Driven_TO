@@ -27,7 +27,7 @@ c_our_final=zeros(batch_size,1);
 mu_store=zeros(batch_size,1);
 rho_store=zeros(batch_size,4800);
 
-% parpool(5)
+parpool(5)
 parfor iii = 1:1:batch_size
     
 count=0;
@@ -192,7 +192,7 @@ learning_rate = 0.1;
 %%%%%%%%%% Get initial g and c %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 phi_til = H*phi(:)./Hs;  
 % rho = (tanh(beta/2)+tanh(beta*(phi_til-0.5)))/(2*tanh(beta/2));
-rho = rho_gen(:,iii);
+rho = double(reshape(rho_gen(iii,:),[nn,1]));
 
 % rho=double(reshape(phi_gen(iii,:),[nn,1]));
 % phi_til = atanh(rho*2*tanh(beta/2)-tanh(beta/2))/beta+0.5;
