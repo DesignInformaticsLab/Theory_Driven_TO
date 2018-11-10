@@ -326,14 +326,14 @@ for iteration_total in range(0,5):
 
         # evaluate the random samples and pick the worst one
         eng = matlab.engine.start_matlab()
-        eng.cal_c_high_dim2(nargout=0)
+        eng.cal_c_high_dim(nargout=0)
 
         ####################################################################
 
         if Prepared_training_sample==False:
-            budget=np.sum(sio.loadmat('{}/budget_store.mat')['budget_store'].reshape([-1]))+budget+100
+            budget=np.sum(sio.loadmat('{}/budget_store.mat')['budget'].reshape([-1]))+budget+100
         else:
-            budget=sio.loadmat('{}/budget_store.mat')['budget_store'][index_ind]+100
+            budget=sio.loadmat('{}/budget_store.mat'.format(directory_data))['budget'][index_ind]+100
         budget_store.append(budget)
 
         # solve the worst one
