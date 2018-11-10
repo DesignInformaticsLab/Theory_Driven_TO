@@ -1,11 +1,12 @@
 %% This code follows the Sigmund 2018 infill bone paper
 % clear;close all;
 % addpath('./fminsdp/');
-load('experiment_data/LHS_train.mat')
-load('experiment_result/phi_gen.mat')
+load('experiment_data/LHS_train5.mat')
+load('experiment_result/rho_gen.mat')
 load('experiment_result/random_candidate.mat')
 random_candidate=random_candidate+1; % python to matlab
 %% Input
+delete(gcp('nocreate'))
 ratio=10;
 nelx=12*ratio; % horizontal length
 nely=4*ratio; % vertical length
@@ -15,6 +16,7 @@ gamma=3.0; % material binarization
 rmin=3.0; % filter radius
 density_r = 6.0; % density radius
 
+phi_gen=rho_gen; % simplify
 batch_size=size(phi_gen,1);
 LHS_rand=LHS_train(random_candidate,:);
 
@@ -25,7 +27,8 @@ c_our_final=zeros(batch_size,1);
 mu_store=zeros(batch_size,1);
 rho_store=zeros(batch_size,4800);
 
-for iii = 1:1:batch_size
+% parpool(5)
+parfor iii = 1:1:batch_size
     
 count=0;
 force=-1;
@@ -43,7 +46,7 @@ F(point_rand,1)= Fy;
 
 %% Algorithm parameters
 p = 16; 
-beta=8.0; 
+beta=1.0; 
 nn = nelx*nely;
 epsilon_al=1e-3;
 epsilon_opt=1e-3;
@@ -188,8 +191,13 @@ learning_rate = 0.1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%% Get initial g and c %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 phi_til = H*phi(:)./Hs;  
-rho = (tanh(beta/2)+tanh(beta*(phi_til-0.5)))/(2*tanh(beta/2));
-%     rho=double(reshape(rho_test(iii,:),[nn,1]));
+% rho = (tanh(beta/2)+tanh(beta*(phi_til-0.5)))/(2*tanh(beta/2));
+rho = rho_gen(:,iii);
+
+% rho=double(reshape(phi_gen(iii,:),[nn,1]));
+% phi_til = atanh(rho*2*tanh(beta/2)-tanh(beta/2))/beta+0.5;
+% phi = full(inv(H)*(phi_til.*Hs));
+
 
 sK = reshape(KE(:)*(Emin+rho(:)'.^gamma*(E0-Emin)),64*nelx*nely,1);
 K = sparse(iK,jK,sK); K = (K+K')/2; 
@@ -211,12 +219,18 @@ dg_dphi = sum(bigM.*bsxfun(@times, dphi_idphi, (bigN*(dg_drhobar./N_count).*drho
 dg_dphi=dg_dphi';
 dc_dphi=dc_dphi';
 
-mu_check=full(sum((dc_dphi*(1-dg_dphi'*(dg_dphi*dg_dphi'+eye(1)*1e-12)^(-1)*dg_dphi)).^2));
+mu_check=full(sum((dc_dphi*(eye(nn)-dg_dphi'*(dg_dphi*dg_dphi'+eye(1)*1e-12)^(-1)*dg_dphi)).^2))+g^2+global_density^2;
 mu_store(iii,:)=mu_check;   
 rho_store(iii,:)=rho(:);
-fprintf('evaluating sample %d \n',iii)
+other_check_store(iii,:)=full(-dc_dphi*dg_dphi'*(dg_dphi*dg_dphi'));
+
+rho_store(iii,:)=rho(:);
+% fprintf('evaluating sample %d, tracking value %d \n',iii, full(-dc_dphi*dg_dphi'*(dg_dphi*dg_dphi')))
 end
 
 [B,I]=sort(mu_store,'descend');
-add_point_index=random_candidate(I(1))-1; % matlab to python
+add_point_index=random_candidate(I(1:10))-1; % matlab to python
+mu_store_before=mu_store(I(1:10));
+save(sprintf('experiment_result/mu_store_before.mat'),'mu_store_before');
 save(sprintf('experiment_result/add_point_index.mat'),'add_point_index');
+% save(sprintf('experiment_result/other_check_store2.mat'),'other_check_store');
