@@ -1,22 +1,3 @@
-<style TYPE="text/css">
-code.has-jax {font: inherit; font-size: 100%; background: inherit; border: inherit;}
-</style>
-<script type="text/x-mathjax-config">
-MathJax.Hub.Config({
-    tex2jax: {
-        inlineMath: [['$','$'], ['\\(','\\)']],
-        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'] // removed 'code' entry
-    }
-});
-MathJax.Hub.Queue(function() {
-    var all = MathJax.Hub.getAllJax(), i;
-    for(i = 0; i < all.length; i += 1) {
-        all[i].SourceElement().parentNode.className += ' has-jax';
-    }
-});
-</script>
-<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
 # One-Shot Optimal Topology Generation through Theory-Driven Machine Learning
 
 ## Abstract
@@ -34,7 +15,7 @@ used to choose new data points for the student to learn from. We show through a 
 problem that the proposed learning mechanism is significantly more data efficient than using a static 
 dataset under the same computational budget.
 
-Full paper is available [here](https://arxiv.org/abs/1807.10787).
+**Full paper is available [here](https://arxiv.org/abs/1807.10787).**
 
 ## Problem Statement
 We define a one-shot solution generator as a feedforword neural network 
@@ -99,6 +80,6 @@ and the median compliance gap:
 |--------------|-------------------------|----------------------------------|
 | Benchmark I  | 5.12% (1.2%)            | 22.12 (3.34)                     |
 | Benchmark II | 0.64% (0.42%)           | 6.64 (0.87)                      |
-| Proposed     | 0.16% (0.09%)           | 5.2 (0.6)                        |
+| Proposed     | **0.16%** (0.09%)           | **5.2** (0.6)                        |
 
 
