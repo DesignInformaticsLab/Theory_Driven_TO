@@ -335,7 +335,7 @@ end
 fname1='experiment_data';
 % fname2='experiment_result';
 for index_LHS = 1:batch_size
-    phi_true_train(index(index_LHS),:)=phi_true(index_LHS).reshape(nely*nexl,1);
+    phi_true_train(index(index_LHS),:)=phi_true(index_LHS).reshape(nely*nelx,1);
 end
 
 save(sprintf('%s/budget_store.mat',fname1),'budget_store');
